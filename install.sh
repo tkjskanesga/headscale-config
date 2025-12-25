@@ -1,44 +1,25 @@
 #!/bin/bash
 
-# Docker Check
-if ! command -v docker &> /dev/null
-then
-  echo "Docker Engine is not installed. Please install it to continue."
+# > curl -fsSL https://raw.githubusercontent.com/tkjskanesga/headscale-config/refs/heads/main/install.sh | bash
+
+if [ "$EUID" -ne 0 ]; then 
+  echo "Please run as root or use sudo."
   exit 1
 fi
 
-# Input
-read -p "Enter domain to tailscale (e.g., tailscale.example.com): " HEADSCALE_DOMAIN
-read -p "Enter domain to headscale UI (Don't same like tailscale connect): " HEADSCALE_UI_DOMAIN
-read -p "Enter JWT Token for headscale UI: " HEADSCALE_JWT
-read -p "Enter your email for TLS registration: (e.g., tlsregis@gmail.com) " EMAIL_TLS
-read -p "Enter your Traefik/Cloudflare email: " CF_EMAIL
-read -p "Enter your Cloudflare API Key: " CF_API
+DEPS=("git:git" "unzip:unzip" "zip:zip" "go:golang" "gcc:build-essential" "curl:curl")
 
-# Write file secret
-echo CF_EMAIL > ./secrets/cloudflare_email
-echo CF_API > ./secrets/cloudflare_api
+echo "Checking system dependencies..."
+for dep in "${DEPS[@]}"; do
+  CMD=${dep%%:*}
+  PKG=${dep##*:}
+  if ! command -v "$CMD" &> /dev/null; then
+    echo "Installing $PKG..."
+    apt update && apt install -y "$PKG"
+  fi
+done
 
-# Headscale Config
-sed -i "s|server_url:.*|server_url: https://$HEADSCALE_DOMAIN|g" ./headscale/config/config.yml
+git clone https://github.com/tkjskanesga/headscale-config.git ./headscale
+cd ./headscale
 
-# Email
-sed -i "s|email:.*|email: $EMAIL_TLS|g" ./traefik/traefik.yml
-sed -i "s@traefik.certificatesResolvers.cloudflare.acme.email=.*@traefik.certificatesResolvers.cloudflare.acme.email=$EMAIL_TLS@g" ./docker-compose.yml
-
-# JWT
-sed -i "s@JWT_SECRET=.*@JWT_SECRET=$HEADSCALE_JWT@g" ./docker-compose.yml
-
-# Routing
-sed -i "s@Host(\`.*\`) # headscale-rule@Host(\`$HEADSCALE_DOMAIN\`) # headscale-rule@g" ./docker-compose.yml
-sed -i "s@Host(\`.*\`) # ui-rule@Host(\`$HEADSCALE_UI_DOMAIN\`) # ui-rule@g" ./docker-compose.yml
-
-# Success Config
-echo "Done! Configuration updated."
-echo "Run docker compose"
-
-# Docker Compose Run
-sudo docker compose up -d
-
-# Success!
-echo "Success!"
+sudo setup.sh
