@@ -1,0 +1,97 @@
+services:
+  headscale:
+    image: headscale/headscale:0.26.1
+    container_name: headscale
+    restart: unless-stopped
+    command: serve
+    networks:
+      - headscale_network
+    volumes:
+      - ${PWD}/headscale/config:/etc/headscale
+      - ${PWD}/headscale/data:/var/lib/headscale
+    labels:
+      # 🐈 Headscale Router
+      - "traefik.enable=true"
+      - "traefik.http.routers.headscale.rule=Host(`tailscale.yourdomain.com`)"
+      - "traefik.http.routers.headscale.entrypoints=websecure"
+      - "traefik.http.routers.headscale.tls.certresolver=cloudflare"
+      - "traefik.http.services.headscale.loadbalancer.server.port=8080"
+
+  headscale-ui:
+    image: ernestoyoofi/headscale-ui:latest
+    container_name: headscale-ui
+    restart: unless-stopped
+    networks:
+      - headscale_network
+    environment:
+      - "HEADSCALE_URL=http://headscale:8080"
+      - "SERVER_LISTEN=3050"
+      - "JWT_SECRET=addyourjwtsecret"
+    labels:
+      # ✨ Headscale UI Router
+      - "traefik.enable=true"
+      - "traefik.http.routers.headscale-ui.rule=Host(`login.tailscale.yourdomain.com`)"
+      - "traefik.http.routers.headscale-ui.entrypoints=websecure"
+      - "traefik.http.routers.headscale-ui.tls.certresolver=cloudflare"
+      - "traefik.http.services.headscale-ui.loadbalancer.server.port=3050"
+
+  traefik:
+    image: traefik:v2.10.4
+    container_name: headscale-proxy
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - headscale_network
+    ports:
+      - 80:80
+      - 443:443
+    secrets:
+      - cloudflare_email
+      - cloudflare_api
+    environment:
+      - CF_API_EMAIL_FILE=/run/secrets/cloudflare_email
+      - CF_API_KEY_FILE=/run/secrets/cloudflare_api
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${PWD}/traefik/traefik.yml:/traefik.yml:ro
+      - ${PWD}/traefik/acme.json:/acme.json
+    labels:
+      # 🌏 Global
+      - "traefik.global.checkNewVersion=false"
+      - "traefik.global.sendAnonymousUsage=false"
+      # 🔥 API
+      - "traefik.api.dashboard=false"
+      - "traefik.api.insecure=false"
+      # 🚦 Entrypoints (HTTP & HTTPS)
+      - "traefik.entryPoints.web.address=:80" # HTTP
+      - "traefik.entryPoints.web.http.redirections.entryPoint.to=websecure" # Force Redirect To HTTPS
+      - "traefik.entryPoints.web.http.redirections.entryPoint.scheme=https"
+      - "traefik.entryPoints.websecure.address=:443" # HTTPS
+      - "traefik.entryPoints.websecure.http.tls.certResolver=cloudflare"
+      # 📑 Certificate Resolver (ACME)
+      - "traefik.certificatesResolvers.cloudflare.acme.email=youremailforregistertls@gmail.com" # Your Email
+      - "traefik.certificatesResolvers.cloudflare.acme.storage=acme.json"
+      - "traefik.certificatesResolvers.cloudflare.acme.dnsChallenge.provider=cloudflare"
+      - "traefik.certificatesResolvers.cloudflare.acme.dnsChallenge.disablePropagationCheck=true"
+      - "traefik.certificatesResolvers.cloudflare.acme.dnsChallenge.resolvers=1.1.1.1:53,1.0.0.1:53,8.8.8.8:53"
+      # 📦 Docker Provider Config
+      - "traefik.providers.docker.exposedByDefault=false"
+      # # 🐈 Dashboard
+      # # See Documentation (https://doc.traefik.io/traefik/reference/install-configuration/api-dashboard/)
+      # - "traefik.http.routers.api.rule=Host(`traefik.tailscale.yourdomain.com`)"
+      # - "traefik.http.routers.api.service=api@internal"
+      # - "traefik.http.routers.api.middlewares=auth-basic@file" # > Recommend To Enable
+      # - "traefik.http.routers.api.entrypoints=websecure"
+      # - "traefik.http.routers.api.tls.certresolver=cloudflare"
+
+networks:
+  headscale_network:
+    name: headscale_network
+
+secrets:
+  cloudflare_email:
+    file: ./secrets/cloudflare_email
+  cloudflare_api:
+    file: ./secrets/cloudflare_api

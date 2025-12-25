@@ -1,0 +1,12 @@
+# Not included because it is used in production
+/.secrets
+/.secrets
+/.secret
+# Not included because it is used in production
+.env
+.env.prod
+.env.semiprod
+acme.json
+/data
+/headscale/data
+/accesslog.json

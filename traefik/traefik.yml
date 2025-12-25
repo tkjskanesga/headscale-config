@@ -1,0 +1,52 @@
+# Traefik configuration
+global:
+  checkNewVersion: true
+  sendAnonymousUsage: false
+
+api:
+  dashboard: false
+  insecure: false
+
+entryPoints:
+  web:
+    address: :80
+    http:
+      redirections: # Force Redirect To HTTPS
+        entryPoint:
+          to: websecure
+          scheme: https
+
+  websecure:
+    address: :443
+    http:
+      tls:
+        certResolver: cloudflare
+
+serversTransport:
+  insecureSkipVerify: true
+
+providers:
+  docker:
+    exposedByDefault: false
+
+certificatesResolvers:
+  cloudflare:
+    acme:
+      email: youremailforregistertls@gmail.com
+      storage: ./acme.json
+      dnsChallenge:
+        provider: cloudflare
+        disablePropagationCheck: true
+        resolvers:
+          - "1.1.1.1:53"
+          - "1.0.0.1:53"
+      httpChallenge:
+        entryPoint: web
+
+http:
+  middlewares:
+    auth-basic:
+      basicAuth:
+        users:
+          # Change!
+          - "admin:$apr1$cK3W/4g7$8QxT/h1I0i2L3N4p5Z6q/"
