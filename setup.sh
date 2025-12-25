@@ -48,7 +48,10 @@ sed -i "s@Host(\`.*\`) # ui-rule@Host(\`$HEADSCALE_UI_DOMAIN\`) # ui-rule@g" ./d
 
 # Success Config
 echo "Done! Configuration updated."
-echo "Run docker compose"
+echo "Running..."
+
+# Run Setup Acme
+sudo bash ./setup-acme.sh
 
 # Docker Compose Run
 sudo docker compose up -d

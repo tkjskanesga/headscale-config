@@ -24,8 +24,8 @@ services:
     networks:
       - headscale_network
     environment:
-      - "HEADSCALE_URL=http://headscale:8080"
-      - "SERVER_LISTEN=3050"
+      - "HEADSCALE_SERVER=http://headscale:8080"
+      - "SERVER_LISTEN=:3050"
       - "JWT_SECRET=addyourjwtsecret"
     labels:
       # ✨ Headscale UI Router
@@ -34,6 +34,9 @@ services:
       - "traefik.http.routers.headscale-ui.entrypoints=websecure"
       - "traefik.http.routers.headscale-ui.tls.certresolver=cloudflare"
       - "traefik.http.services.headscale-ui.loadbalancer.server.port=3050"
+    volumes:
+      - ${PWD}/headscale-ui/database:/app/database
+      - ${PWD}/headscale-ui/secret:/app/secret
 
   traefik:
     image: traefik:v2.10.4

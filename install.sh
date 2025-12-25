@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# > curl -fsSL https://raw.githubusercontent.com/tkjskanesga/headscale-config/refs/heads/main/install.sh | bash
+# > curl -fsSL https://raw.githubusercontent.com/tkjskanesga/headscale-config/refs/heads/main/install.sh | sudo bash
 
-if [ "$EUID" -ne 0 ]; then 
+if [ "$EUID" -ne 0 ]; then
   echo "Please run as root or use sudo."
   exit 1
 fi
@@ -19,11 +19,11 @@ for dep in "${DEPS[@]}"; do
   fi
 done
 
-if [ ! -d "$DIRECTORY" ]; then
+if [ ! -d ./headscale ]; then
   git clone https://github.com/tkjskanesga/headscale-config.git ./headscale
 fi
 
 cd ./headscale
 
-chmod +x setup.sh
-sudo setup.sh
+chmod +x ./setup.sh
+sudo ./setup.sh
