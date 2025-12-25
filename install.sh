@@ -19,7 +19,11 @@ for dep in "${DEPS[@]}"; do
   fi
 done
 
-git clone https://github.com/tkjskanesga/headscale-config.git ./headscale
+if [ ! -d "$DIRECTORY" ]; then
+  git clone https://github.com/tkjskanesga/headscale-config.git ./headscale
+fi
+
 cd ./headscale
 
+chmod +x setup.sh
 sudo setup.sh
