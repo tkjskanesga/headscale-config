@@ -1,0 +1,49 @@
+# NOT RECOMMENDED
+#
+# If you want to use it because you don't have a public IP, you must at least have 1 domain and of course you can connect first, because this implementation is rather difficult, so it requires extra testing.
+services:
+  headscale:
+    image: headscale/headscale:0.26.1
+    container_name: headscale-tunnel
+    restart: unless-stopped
+    command: serve
+    networks:
+      - headscale_network_tunnel
+    volumes:
+      - ${PWD}/headscale/config:/etc/headscale
+      - ${PWD}/headscale/data:/var/lib/headscale
+
+  headscale-ui:
+    image: ernestoyoofi/headscale-ui:latest
+    container_name: headscale-tunnel-ui
+    restart: unless-stopped
+    networks:
+      - headscale_network_tunnel
+    environment:
+      - "HEADSCALE_SERVER=http://headscale:8080"
+      - "SERVER_LISTEN=:3050"
+      - "JWT_SECRET=addyourjwtsecret"
+    volumes:
+      - ${PWD}/headscale-ui/database:/app/database
+      - ${PWD}/headscale-ui/secret:/app/secret
+    
+  tunneling:
+    image: cloudflare/cloudflared
+    container_name: headscale-tunnel-tunneling
+    command: tunnel --no-autoupdate run
+    restart: unless-stopped
+    networks:
+      - headscale_network_tunnel
+    secrets:
+      - cloudflare_tokentunnel
+    environment:
+      - TUNNEL_TOKEN=/run/secrets/cloudflare_tokentunnel
+      - TZ=Asia/Jakarta
+
+networks:
+  headscale_network_tunnel:
+    name: headscale_network_tunnel
+
+secrets:
+  cloudflare_tokentunnel:
+    file: ./secrets/cloudflare_tokentunnel
