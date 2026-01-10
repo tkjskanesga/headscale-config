@@ -39,7 +39,7 @@ services:
       - ${PWD}/headscale-ui/secret:/app/secret
 
   traefik:
-    image: traefik:v2.10.4
+    image: traefik:latest # Change tagname to support docker version
     container_name: headscale-proxy
     restart: unless-stopped
     security_opt:
